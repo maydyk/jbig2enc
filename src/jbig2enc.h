@@ -40,6 +40,11 @@
 #include <stdint.h>
 #endif
 
+// -----------------------------------------------------------------------------
+// Returns the version identifier as a static string.
+// -------------------------------------------------------------------------
+char const *getVersion();
+
 struct Pix;
 // This is the (opaque) structure which handles multi-page compression.
 struct jbig2ctx;
@@ -133,5 +138,17 @@ jbig2_encode_generic(struct Pix *const bw, const bool full_headers,
                      const int xres, const int yres,
                      const bool duplicate_line_removal,
                      int *const length);
+
+// -------------------------------------------------------------------------------
+// jbig2enc_auto_threshold gathers classes of symbols and uses a single
+// representative to stand for them all.
+// -------------------------------------------------------------------------------
+void jbig2enc_auto_threshold(struct jbig2ctx *ctx);
+
+// -------------------------------------------------------------------------------
+// auto_threshold_using_hash performs the same action as auto_threshold, but
+// uses a hash function to attempt to quickly discard improbable matches.
+// -------------------------------------------------------------------------------
+void jbig2enc_auto_threshold_using_hash(struct jbig2ctx *ctx);
 
 #endif  // JBIG2ENC_JBIG2_H__

@@ -1,3 +1,22 @@
+#!/usr/bin/python
+# Copyright 2006 Google Inc.
+# Author: agl@imperialviolet.org (Adam Langley)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# JBIG2 Encoder
+# https://github.com/agl/jbig2enc
+
 import sys
 import re
 import struct
@@ -8,6 +27,8 @@ import os
 # multipage symbol compression.
 # Run ./jbig2 -s -p <other options> image1.jpeg image1.jpeg ...
 # python pdf.py output > out.pdf
+
+dpi = 72
 
 class Ref:
   def __init__(self, x):
@@ -107,25 +128,32 @@ def main(symboltable='symboltable', pagefiles=glob.glob('page-*')):
   doc.add_object(Obj({'Type' : '/Outlines', 'Count': '0'}))
   pages = Obj({'Type' : '/Pages'})
   doc.add_object(pages)
-  symd = doc.add_object(Obj({}, file(symboltable, 'r').read()))
+  symd = doc.add_object(Obj({}, file(symboltable, 'rb').read()))
   page_objs = []
 
+  pagefiles.sort()
   for p in pagefiles:
     try:
-      contents = file(p).read()
+      contents = file(p, mode='rb').read()
     except IOError:
       sys.stderr.write("error reading page file %s\n"% p)
       continue
-    (width, height) = struct.unpack('>II', contents[11:19])
+    (width, height, xres, yres) = struct.unpack('>IIII', contents[11:27])
+
+    if xres == 0:
+        xres = dpi
+    if yres == 0:
+        yres = dpi
+
     xobj = Obj({'Type': '/XObject', 'Subtype': '/Image', 'Width':
         str(width), 'Height': str(height), 'ColorSpace': '/DeviceGray',
         'BitsPerComponent': '1', 'Filter': '/JBIG2Decode', 'DecodeParms':
         ' << /JBIG2Globals %d 0 R >>' % symd.id}, contents)
-    contents = Obj({}, 'q %d 0 0 %d 0 0 cm /Im1 Do Q' % (width, height))
+    contents = Obj({}, 'q %f 0 0 %f 0 0 cm /Im1 Do Q' % (float(width * 72) / xres, float(height * 72) / yres))
     resources = Obj({'ProcSet': '[/PDF /ImageB]',
         'XObject': '<< /Im1 %d 0 R >>' % xobj.id})
     page = Obj({'Type': '/Page', 'Parent': '3 0 R',
-        'MediaBox': '[ 0 0 %d %d ]' % (width, height),
+        'MediaBox': '[ 0 0 %f %f ]' % (float(width * 72) / xres, float(height * 72) / yres),
         'Contents': ref(contents.id),
         'Resources': ref(resources.id)})
     [doc.add_object(x) for x in [xobj, contents, resources, page]]
@@ -142,9 +170,12 @@ def usage(script, msg):
     sys.stderr.write("%s: %s\n"% (script, msg))
   sys.stderr.write("Usage: %s [file_basename] > out.pdf\n"% script)
   sys.exit(1)
-  
-  
+
+
 if __name__ == '__main__':
+  if sys.platform == "win32":
+    import msvcrt
+    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 
   if len(sys.argv) == 2:
     sym = sys.argv[1] + '.sym'
@@ -153,11 +184,11 @@ if __name__ == '__main__':
     sym = 'symboltable'
     pages = glob.glob('page-*')
   else:
-    usage(sys.argv[0])
+    usage(sys.argv[0], "wrong number of args!")
 
   if not os.path.exists(sym):
-    usage("symbol table %s not found!"% sym)
+    usage(sys.argv[0], "symbol table %s not found!"% sym)
   elif len(pages) == 0:
-    usage("no pages found!")
-  
+    usage(sys.argv[0], "no pages found!")
+
   main(sym, pages)
