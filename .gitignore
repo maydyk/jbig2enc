@@ -6,7 +6,7 @@ test*
 *.la
 Makefile
 /libtool
-/src/.libs
+/src/.com.pixelnetica.classloader.getLibs
 /src/jbig2
 Debug*
 Release*
