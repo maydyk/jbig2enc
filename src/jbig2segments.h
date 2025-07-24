@@ -33,7 +33,7 @@
 #endif
 struct jbig2_segment {
   u32 number;
-#if _BYTE_ORDER == _LITTLE_ENDIAN   //#ifndef _BIG_ENDIAN
+#if not defined(_BIG_ENDIAN) || (_BYTE_ORDER == _LITTLE_ENDIAN)
   unsigned char type : 6;
   unsigned char page_assoc_size : 1;
   unsigned char deferred_non_retain : 1;
@@ -43,8 +43,8 @@ struct jbig2_segment {
   unsigned char type : 6;
 #endif
 
-#if _BYTE_ORDER == _LITTLE_ENDIAN   //#ifndef _BIG_ENDIAN
-  unsigned char retain_bits : 5;
+#if not defined(_BIG_ENDIAN) || (_BYTE_ORDER == _LITTLE_ENDIAN)
+    unsigned char retain_bits : 5;
   unsigned char segment_count : 3;
 #else
   unsigned char segment_count : 3;
